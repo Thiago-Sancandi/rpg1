@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Confronto de Destinos</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+  <style>
+    .fade-in {
+      animation: fadeIn 1s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .sprite {
+      width: 80px;
+      height: 80px;
+      background-size: cover;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white font-sans p-4">
+  <div class="max-w-5xl mx-auto">
+    <h1 class="text-4xl text-center font-bold mb-6">Confronto de Destinos</h1>
+
+    <!-- Tela de Seleção de Classes -->
+    <div id="class-selection" class="grid grid-cols-2 gap-4 mb-8">
+      <div>
+        <h2 class="text-xl font-semibold mb-2">Jogador 1 - Escolha sua classe:</h2>
+        <select id="player1-class" class="w-full p-2 bg-gray-800 text-white rounded">
+          <option value="guerreiro">Guerreiro</option>
+          <option value="feiticeiro">Feiticeiro</option>
+          <option value="ladino">Ladino</option>
+          <option value="clerigo">Clérigo</option>
+        </select>
+      </div>
+      <div>
+        <h2 class="text-xl font-semibold mb-2">Jogador 2 - Escolha sua classe:</h2>
+        <select id="player2-class" class="w-full p-2 bg-gray-800 text-white rounded">
+          <option value="guerreiro">Guerreiro</option>
+          <option value="feiticeiro">Feiticeiro</option>
+          <option value="ladino">Ladino</option>
+          <option value="clerigo">Clérigo</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="start-game" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded">Iniciar Jogo</button>
+
+    <!-- Área da Batalha -->
+    <div id="battle-area" class="hidden mt-8 fade-in">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <div class="sprite" id="sprite1"></div>
+          <h3 class="text-lg font-bold mb-2">Jogador 1</h3>
+          <div id="player1-info" class="mb-4"></div>
+          <button class="bg-red-600 px-4 py-2 rounded" onclick="playerAction(1, 'atacar')">Atacar</button>
+          <button class="bg-yellow-600 px-4 py-2 rounded ml-2" onclick="playerAction(1, 'defender')">Defender</button>
+          <button class="bg-green-600 px-4 py-2 rounded ml-2" onclick="playerEvent(1)">Escolha</button>
+        </div>
+        <div>
+          <div class="sprite" id="sprite2"></div>
+          <h3 class="text-lg font-bold mb-2">Jogador 2</h3>
+          <div id="player2-info" class="mb-4"></div>
+          <button class="bg-red-600 px-4 py-2 rounded" onclick="playerAction(2, 'atacar')">Atacar</button>
+          <button class="bg-yellow-600 px-4 py-2 rounded ml-2" onclick="playerAction(2, 'defender')">Defender</button>
+          <button class="bg-green-600 px-4 py-2 rounded ml-2" onclick="playerEvent(2)">Escolha</button>
+        </div>
+      </div>
+      <div id="log" class="mt-6 bg-gray-800 p-4 rounded h-48 overflow-y-auto text-sm"></div>
+    </div>
+  </div>
+
+  <script>
+    const startButton = document.getElementById('start-game');
+    const battleArea = document.getElementById('battle-area');
+    const player1Info = document.getElementById('player1-info');
+    const player2Info = document.getElementById('player2-info');
+    const log = document.getElementById('log');
+    const sprite1 = document.getElementById('sprite1');
+    const sprite2 = document.getElementById('sprite2');
+
+    let players = {
+      1: { nome: 'Jogador 1', classe: '', vida: 100, karma: 0 },
+      2: { nome: 'Jogador 2', classe: '', vida: 100, karma: 0 }
+    };
+
+    const sprites = {
+      guerreiro: 'url(https://i.imgur.com/lUQyNKT.png)',
+      feiticeiro: 'url(https://i.imgur.com/sVZBKzO.png)',
+      ladino: 'url(https://i.imgur.com/6ItT64m.png)',
+      clerigo: 'url(https://i.imgur.com/CA9RJcx.png)'
+    };
+
+    const eventos = [
+      {
+        texto: 'Você encontra uma aldeia em ruínas. Ajudar os sobreviventes?',
+        opcoes: [
+          { texto: 'Sim', efeito: (p) => { players[p].karma += 1; log.innerText += `\nJogador ${p} ajudou e ganhou karma.`; } },
+          { texto: 'Não', efeito: (p) => { players[p].vida += 5; log.innerText += `\nJogador ${p} saqueou e recuperou 5 de vida.`; } }
+        ]
+      },
+      {
+        texto: 'Um demônio oferece poder em troca de alma. Aceitar?',
+        opcoes: [
+          { texto: 'Aceitar', efeito: (p) => { players[p].vida += 10; players[p].karma -= 2; log.innerText += `\nJogador ${p} ganhou poder sombrio.`; } },
+          { texto: 'Recusar', efeito: (p) => { players[p].karma += 1; log.innerText += `\nJogador ${p} manteve sua alma pura.`; } }
+        ]
+      }
+    ];
+
+    startButton.addEventListener('click', () => {
+      const class1 = document.getElementById('player1-class').value;
+      const class2 = document.getElementById('player2-class').value;
+
+      players[1].classe = class1;
+      players[2].classe = class2;
+
+      sprite1.style.backgroundImage = sprites[class1];
+      sprite2.style.backgroundImage = sprites[class2];
+
+      updateInfo();
+      battleArea.classList.remove('hidden');
+    });
+
+    function updateInfo() {
+      player1Info.innerText = `${players[1].classe.toUpperCase()} - Vida: ${players[1].vida} - Karma: ${players[1].karma}`;
+      player2Info.innerText = `${players[2].classe.toUpperCase()} - Vida: ${players[2].vida} - Karma: ${players[2].karma}`;
+    }
+
+    function playerAction(player, action) {
+      const opponent = player === 1 ? 2 : 1;
+      let logMsg = `${players[player].nome} (${players[player].classe}) escolheu ${action}.\n`;
+
+      if (action === 'atacar') {
+        const dano = Math.floor(Math.random() * 20 + 5);
+        players[opponent].vida -= dano;
+        logMsg += `Causou ${dano} de dano ao ${players[opponent].nome}!`;
+      } else if (action === 'defender') {
+        players[player].vida += 10;
+        logMsg += `Recuperou 10 de vida!`;
+      }
+
+      updateInfo();
+      log.innerText += `\n${logMsg}`;
+      log.scrollTop = log.scrollHeight;
+
+      verificarFim();
+    }
+
+    function playerEvent(player) {
+      const evento = eventos[Math.floor(Math.random() * eventos.length)];
+      const escolha = confirm(`Jogador ${player}: ${evento.texto}`) ? 0 : 1;
+      evento.opcoes[escolha].efeito(player);
+      updateInfo();
+      log.scrollTop = log.scrollHeight;
+      verificarFim();
+    }
+
+    function verificarFim() {
+      [1, 2].forEach(p => {
+        if (players[p].vida <= 0) {
+          alert(`Jogador ${p} foi derrotado!`);
+          // Opcional: bloquear botões ou reiniciar o jogo
+        }
+      });
+    }
+  </script>
+</body>
+</html>
