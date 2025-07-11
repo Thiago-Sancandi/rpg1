@@ -19,6 +19,20 @@
       background-size: cover;
       margin-bottom: 8px;
     }
+    @keyframes flashRed {
+      0%, 100% { filter: none; }
+      50% { filter: drop-shadow(0 0 8px red); }
+    }
+    @keyframes flashGreen {
+      0%, 100% { filter: none; }
+      50% { filter: drop-shadow(0 0 8px limegreen); }
+    }
+    .flash-attack {
+      animation: flashRed 0.5s ease-in-out 1;
+    }
+    .flash-defend {
+      animation: flashGreen 0.5s ease-in-out 1;
+    }
   </style>
 </head>
 <body class="bg-gray-900 text-white font-sans p-4">
@@ -69,7 +83,7 @@
           <button class="bg-green-600 px-4 py-2 rounded ml-2" onclick="playerEvent(2)">Escolha</button>
         </div>
       </div>
-      <div id="log" class="mt-6 bg-gray-800 p-4 rounded h-48 overflow-y-auto text-sm"></div>
+      <div id="log" class="mt-6 bg-gray-800 p-4 rounded h-48 overflow-y-auto text-sm whitespace-pre-wrap"></div>
     </div>
   </div>
 
@@ -94,6 +108,7 @@
       clerigo: 'url(https://i.imgur.com/CA9RJcx.png)'
     };
 
+    // Eventos narrativos mais ricos e variados
     const eventos = [
       {
         texto: 'Você encontra uma aldeia em ruínas. Ajudar os sobreviventes?',
@@ -107,6 +122,20 @@
         opcoes: [
           { texto: 'Aceitar', efeito: (p) => { players[p].vida += 10; players[p].karma -= 2; log.innerText += `\nJogador ${p} ganhou poder sombrio.`; } },
           { texto: 'Recusar', efeito: (p) => { players[p].karma += 1; log.innerText += `\nJogador ${p} manteve sua alma pura.`; } }
+        ]
+      },
+      {
+        texto: 'Você encontra um mercador misterioso. Comprar uma poção por 10 de vida?',
+        opcoes: [
+          { texto: 'Comprar', efeito: (p) => { players[p].vida -= 10; players[p].karma += 1; log.innerText += `\nJogador ${p} comprou uma poção e ganhou karma.`; } },
+          { texto: 'Ignorar', efeito: (p) => { log.innerText += `\nJogador ${p} ignorou o mercador.`; } }
+        ]
+      },
+      {
+        texto: 'Uma besta selvagem aparece! Tentar fugir?',
+        opcoes: [
+          { texto: 'Fugir', efeito: (p) => { if(Math.random() > 0.5) { log.innerText += `\nJogador ${p} fugiu com sucesso.`; } else { players[p].vida -= 15; log.innerText += `\nJogador ${p} não conseguiu fugir e perdeu 15 de vida.`; } } },
+          { texto: 'Lutar', efeito: (p) => { players[p].vida -= 10; players[p].karma += 1; log.innerText += `\nJogador ${p} lutou bravamente e ganhou karma.`; } }
         ]
       }
     ];
@@ -123,6 +152,7 @@
 
       updateInfo();
       battleArea.classList.remove('hidden');
+      log.innerText = "Batalha iniciada!\n";
     });
 
     function updateInfo() {
@@ -134,13 +164,25 @@
       const opponent = player === 1 ? 2 : 1;
       let logMsg = `${players[player].nome} (${players[player].classe}) escolheu ${action}.\n`;
 
+      const sprite = player === 1 ? sprite1 : sprite2;
+
       if (action === 'atacar') {
         const dano = Math.floor(Math.random() * 20 + 5);
         players[opponent].vida -= dano;
         logMsg += `Causou ${dano} de dano ao ${players[opponent].nome}!`;
+
+        // efeito ataque
+        sprite.classList.remove('flash-attack');
+        void sprite.offsetWidth; // reflow para reiniciar animação
+        sprite.classList.add('flash-attack');
       } else if (action === 'defender') {
         players[player].vida += 10;
         logMsg += `Recuperou 10 de vida!`;
+
+        // efeito defesa
+        sprite.classList.remove('flash-defend');
+        void sprite.offsetWidth;
+        sprite.classList.add('flash-defend');
       }
 
       updateInfo();
@@ -152,8 +194,19 @@
 
     function playerEvent(player) {
       const evento = eventos[Math.floor(Math.random() * eventos.length)];
-      const escolha = confirm(`Jogador ${player}: ${evento.texto}`) ? 0 : 1;
-      evento.opcoes[escolha].efeito(player);
+      
+      // Criar prompt customizado para escolher opção
+      let mensagem = `Jogador ${player}: ${evento.texto}\n`;
+      evento.opcoes.forEach((op, i) => {
+        mensagem += `${i + 1} - ${op.texto}\n`;
+      });
+      let escolha = prompt(mensagem);
+      escolha = parseInt(escolha);
+      if (isNaN(escolha) || escolha < 1 || escolha > evento.opcoes.length) {
+        log.innerText += `\nJogador ${player} não escolheu uma opção válida e perdeu a vez.`;
+        return;
+      }
+      evento.opcoes[escolha - 1].efeito(player);
       updateInfo();
       log.scrollTop = log.scrollHeight;
       verificarFim();
@@ -163,7 +216,7 @@
       [1, 2].forEach(p => {
         if (players[p].vida <= 0) {
           alert(`Jogador ${p} foi derrotado!`);
-          // Opcional: bloquear botões ou reiniciar o jogo
+          // Você pode adicionar aqui reset do jogo ou desabilitar botões, etc.
         }
       });
     }
